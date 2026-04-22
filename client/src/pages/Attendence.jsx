@@ -27,7 +27,7 @@ const Attendance = () => {
   today.setHours(0, 0, 0, 0);
 
   const todayRecord = history.find(
-    (r) => new Date(r.date).toDateString() === today.toDateString()
+    (r) => new Date(r.date).toDateString() === today.toDateString(),
   );
 
   return (
@@ -50,10 +50,7 @@ const Attendance = () => {
         </div>
       ) : (
         <div>
-          <CheckInButton
-            todayRecord={todayRecord}
-            onAction={fetchData}
-          />
+          <CheckInButton todayRecord={todayRecord} onAction={fetchData} />
         </div>
       )}
 
