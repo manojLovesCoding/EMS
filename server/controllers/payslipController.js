@@ -75,7 +75,7 @@ export const getPayslipById = async (req, res) => {
       .populate("employeeId")
       .lean();
 
-    if (!payslip) return res.status(404).json({ error: "Not found" });
+    if (!payslip) return res.status(404).json({ error: "Not found." });
     const result = {
       ...payslip,
       id: payslip._id.toString(),
