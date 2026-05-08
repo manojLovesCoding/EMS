@@ -4,6 +4,8 @@ import Loading from "../components/Loading";
 import CheckInButton from "../components/Attendance/CheckInButton";
 import AttendanceStats from "../components/Attendance/AttendanceStats";
 import AttendanceHistory from "../components/Attendance/AttendanceHistory";
+import api from "../api/axios";
+import toast from "react-hot-toast";
 
 const Attendance = () => {
   const [history, setHistory] = useState([]);
@@ -11,10 +13,18 @@ const Attendance = () => {
   const [isDeleted, setDeleted] = useState(false);
 
   const fetchData = useCallback(async () => {
-    setHistory(dummyAttendanceData);
-    setTimeout(() => {
+    try {
+      const res = await api.get("/attendance");
+      const json = res.data;
+      setHistory(json.data || []);
+      if (json.employee?.isDeleted) setDeleted(true);
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message || "Failed to fetch attendance data",
+      );
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   }, []);
 
   useEffect(() => {

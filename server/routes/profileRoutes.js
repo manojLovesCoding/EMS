@@ -6,6 +6,6 @@ import { getProfile, updateProfile } from "../controllers/profileContoller.js";
 const profileRouter = Router();
 
 profileRouter.get("/", protect, getProfile);
-profileRouter.post("/:id", protect, updateProfile);
+profileRouter.put("/", protect, updateProfile);
 
 export default profileRouter;

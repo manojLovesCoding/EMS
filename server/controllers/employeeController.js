@@ -11,8 +11,8 @@ export const getEmployees = async (req, res) => {
 
     if (department) where.department = department;
 
-    const employees = (await Employee.find(where))
-      .toSorted({ createdAt: -1 })
+    const employees = await Employee.find(where)
+      .sort({ createdAt: -1 })
       .populate("userId", "email role")
       .lean();
 
@@ -116,8 +116,8 @@ export const updateEmployees = async (req, res) => {
       position,
       department: department || "Engineering",
       basicSalary: Number(basicSalary) || 0,
-      allowances: Number(basicSalary) || 0,
-      deductions: Number(basicSalary) || 0,
+      allowances: Number(allowances) || 0,
+      deductions: Number(deductions) || 0,
       employmentStatus: employmentStatus || "ACTIVE",
       bio: bio || "",
     });

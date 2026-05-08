@@ -33,7 +33,7 @@ const EmployeeDashboard = ({ data }) => {
   return (
     <div className="animate-fade-in">
       <div className="page-header">
-        <h1 className="page-title">Welcome, {emp?.firstName}! </h1>
+        <h1 className="page-title">Welcome, {emp?.firstName}!</h1>
         <p className="page-subtitle">
           {emp?.position} - {emp?.department || "No Department"}
         </p>
@@ -59,7 +59,7 @@ const EmployeeDashboard = ({ data }) => {
 
       <div className="flex flex-col sm:flex-row gap-3  ">
         <Link
-          to="/attendence"
+          to="/attendance"
           className="btn-primary text-center inline-flex items-center justify-center gap-2 "
         >
           Mark Attendance <ArrowRightIcon className="w-4 h-4" />

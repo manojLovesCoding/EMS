@@ -57,7 +57,7 @@ export const getDashboard = async (req, res) => {
         ]);
       return res.json({
         role: "EMPLOYEE",
-        employees: { ...employee, id: employee._id.toString() },
+        employee: { ...employee, id: employee._id.toString() },
         currentMonthAttendance,
         pendingLeaves,
         latestPayslip: latestPayslip

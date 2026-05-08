@@ -1,5 +1,6 @@
 import { Loader2, Save, User } from "lucide-react";
 import React, { useState } from "react";
+import api from "../api/axios";
 
 const ProfileForm = ({ initialData, onSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -8,6 +9,19 @@ const ProfileForm = ({ initialData, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError("");
+    setMessage("");
+    const formData = new FormData(e.currentTarget);
+    try {
+      await api.put("/profile", formData);
+      setMessage("Profile updated successfully");
+      onSuccess?.();
+    } catch (error) {
+      setError(error.response?.data?.error || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
   };
   return (
     <form onSubmit={handleSubmit} className="card p-5 sm:p-6 mb-6 ">
@@ -66,15 +80,20 @@ const ProfileForm = ({ initialData, onSuccess }) => {
           <label className="block text-sm font-medium text-slate-700 mb-2">
             Bio
           </label>
+
           <textarea
-            disabled
-            value={initialData.bio}
+            disabled={initialData.isDeleted}
             name="bio"
             defaultValue={initialData.bio || ""}
             placeholder="Write a brief bio..."
-            className={`resize-none ${initialData.isDeleted ? "bg-amber-50 text-slate-400 cursor-not-allowed" : ""}`}
+            className={`w-full rounded-xl border border-slate-300 px-3 py-2 resize-none ${
+              initialData.isDeleted
+                ? "bg-amber-50 text-slate-400 cursor-not-allowed"
+                : "bg-white"
+            }`}
             rows={4}
           />
+
           <p className="text-xs text-slate-500 mt-2">
             This will be displayed on your profile.
           </p>
