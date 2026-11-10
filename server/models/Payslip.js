@@ -7,12 +7,42 @@ const payslipSchema = new mongoose.Schema(
       ref: "Employee",
       required: true,
     },
-    month: { type: Number, required: true },
-    year: { type: Number, required: true },
-    basicSalary: { type: Number, required: true },
-    allowances: { type: Number, default: 0 },
-    deductions: { type: Number, default: 0 },
-    netSalary: { type: Number, required: true },
+    month: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 12,
+    },
+    year: {
+      type: Number,
+      required: true,
+    },
+    basicSalary: {
+      type: Number,
+      required: true,
+    },
+    allowances: {
+      type: Number,
+      default: 0,
+    },
+    // Existing regular deductions.
+    deductions: {
+      type: Number,
+      default: 0,
+    },
+    // Unpaid leave details for this payslip month.
+    unpaidLeaveDays: {
+      type: Number,
+      default: 0,
+    },
+    unpaidLeaveDeduction: {
+      type: Number,
+      default: 0,
+    },
+    netSalary: {
+      type: Number,
+      required: true,
+    },
   },
   { timestamps: true },
 );

@@ -39,12 +39,69 @@ const leaveApplicationSchema = new mongoose.Schema(
       default: "FULL",
     },
 
-    // Calculated by the backend.
+    // Total requested working days.
     totalDays: {
       type: Number,
       required: true,
       min: 0,
     },
+
+    // Total paid leave days.
+    paidDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Total unpaid leave days.
+    unpaidDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Paid leave breakdown.
+    paidRegularDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    paidSickDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    // Unpaid leave breakdown.
+    unpaidRegularDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    unpaidSickDays: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+
+    // Exact unpaid dates, used for monthly payslip calculations.
+    unpaidDateBreakdown: [
+      {
+        date: {
+          type: Date,
+          required: true,
+        },
+        days: {
+          type: Number,
+          required: true,
+          min: 0,
+        },
+      },
+    ],
+
 
     reason: {
       type: String,
