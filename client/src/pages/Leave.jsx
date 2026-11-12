@@ -54,24 +54,28 @@ const Leave = () => {
       label: "Regular Leave",
       value: balance?.regular?.available ?? 0,
       description: "days available",
+      detail: `${balance?.regular?.earned ?? 0} earned`,
       icon: PalmtreeIcon,
     },
     {
       label: "Sick Leave",
       value: balance?.sick?.available ?? 0,
       description: "days available",
+      detail: `${balance?.sick?.allowance ?? 4} days allowance`,
       icon: ThermometerIcon,
     },
     {
       label: "Regular Leave Used",
       value: balance?.regular?.used ?? 0,
-      description: "days taken",
+      description: "days used",
+      detail: "Approved paid leave",
       icon: UmbrellaIcon,
     },
   ];
 
   return (
     <div className="animate-fade-in">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <h1 className="page-title">Leave Management</h1>
@@ -94,6 +98,7 @@ const Leave = () => {
         )}
       </div>
 
+      {/* Employee leave balance */}
       {!isAdmin && (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5 mb-8">
@@ -108,7 +113,7 @@ const Leave = () => {
                   <stat.icon className="w-5 h-5 text-slate-600 group-hover:text-indigo-600 transition-colors duration-200" />
                 </div>
 
-                <div>
+                <div className="min-w-0">
                   <p className="text-sm text-slate-500">
                     {stat.label}
                   </p>
@@ -119,26 +124,44 @@ const Leave = () => {
                       {stat.description}
                     </span>
                   </p>
+
+                  <p className="text-xs text-slate-400 mt-1">
+                    {stat.detail}
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
           {balance?.leaveYear && (
-            <p className="text-xs text-slate-400 mb-5">
-              Leave year:{" "}
-              {balance.leaveYear.start} to {balance.leaveYear.end}
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-5">
+              <p className="text-xs text-slate-400">
+                Leave year:{" "}
+                {balance.leaveYear.start} to {balance.leaveYear.end}
+              </p>
+
+              <p className="text-xs text-slate-400">
+                Regular leave is credited at 0.5 day per eligible month.
+              </p>
+            </div>
+          )}
+
+          {isDeleted && (
+            <div className="mb-5 rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
+              Your account is inactive. You cannot submit new leave applications.
+            </div>
           )}
         </>
       )}
 
+      {/* Leave history */}
       <LeaveHistory
         leaves={leaves}
         isAdmin={isAdmin}
         onUpdate={fetchLeaves}
       />
 
+      {/* Apply leave modal */}
       <ApplyLeaveModal
         open={showModal}
         onClose={() => setShowModal(false)}

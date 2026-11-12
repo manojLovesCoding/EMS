@@ -18,6 +18,15 @@ const getLocalDateString = (date) => {
   return `${year}-${month}-${day}`;
 };
 
+// Check Sunday without UTC timezone conversion.
+const isSunday = (dateString) => {
+  if (!dateString) return false;
+
+  const [year, month, day] = dateString.split("-").map(Number);
+
+  return new Date(year, month - 1, day).getDay() === 0;
+};
+
 const ApplyLeaveModal = ({
   open,
   onClose,
@@ -40,6 +49,9 @@ const ApplyLeaveModal = ({
 
   const isSingleDate = startDate && startDate === endDate;
 
+  const firstDayIsSunday = isSunday(startDate);
+  const lastDayIsSunday = isSunday(endDate);
+
   useEffect(() => {
     if (open) {
       setType("REGULAR");
@@ -50,11 +62,32 @@ const ApplyLeaveModal = ({
     }
   }, [open]);
 
+  // Change leave type.
+  const handleTypeChange = (value) => {
+    setType(value);
+    setStartDayType("FULL");
+    setEndDayType("FULL");
+  };
+
+  // Change first date.
   const handleStartDateChange = (value) => {
     setStartDate(value);
 
     if (endDate && value > endDate) {
       setEndDate(value);
+    }
+
+    if (isSunday(value)) {
+      setStartDayType("FULL");
+    }
+  };
+
+  // Change last date.
+  const handleEndDateChange = (value) => {
+    setEndDate(value);
+
+    if (isSunday(value)) {
+      setEndDayType("FULL");
     }
   };
 
@@ -71,19 +104,49 @@ const ApplyLeaveModal = ({
       return;
     }
 
-    setLoading(true);
+    const reason = e.currentTarget.reason.value.trim();
+
+    if (!reason) {
+      toast.error("Please provide a reason for leave.");
+      return;
+    }
+
+    if (
+      type === "REGULAR" &&
+      startDayType === "HALF" &&
+      firstDayIsSunday
+    ) {
+      toast.error("The first day of a half-day request must be a working day.");
+      return;
+    }
+
+    if (
+      type === "REGULAR" &&
+      !isSingleDate &&
+      endDayType === "HALF" &&
+      lastDayIsSunday
+    ) {
+      toast.error("The last day of a half-day request must be a working day.");
+      return;
+    }
 
     const data = {
       type,
       startDate,
       endDate,
-      startDayType: type === "REGULAR" ? startDayType : "FULL",
+
+      startDayType:
+        type === "REGULAR" ? startDayType : "FULL",
+
       endDayType:
         type === "REGULAR" && !isSingleDate
           ? endDayType
           : "FULL",
-      reason: e.target.reason.value,
+
+      reason,
     };
+
+    setLoading(true);
 
     try {
       await api.post("/leave", data);
@@ -109,7 +172,7 @@ const ApplyLeaveModal = ({
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={onClose}
+      onClick={loading ? undefined : onClose}
     >
       <div
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-fade-in"
@@ -149,8 +212,9 @@ const ApplyLeaveModal = ({
             <select
               name="type"
               value={type}
-              onChange={(e) => setType(e.target.value)}
+              onChange={(e) => handleTypeChange(e.target.value)}
               required
+              disabled={loading}
               className="w-full"
             >
               <option value="REGULAR">Regular Paid Leave</option>
@@ -158,18 +222,31 @@ const ApplyLeaveModal = ({
             </select>
 
             {type === "REGULAR" && balance?.regular && (
-              <p className="text-xs text-slate-500 mt-2">
-                Available regular leave:{" "}
-                <strong>{balance.regular.available} day(s)</strong>
-              </p>
+              <div className="mt-2 text-xs text-slate-500 space-y-1">
+                <p>
+                  Available regular leave:{" "}
+                  <strong>{balance.regular.available} day(s)</strong>
+                </p>
+
+                <p>
+                  Earned: {balance.regular.earned} day(s) | Used:{" "}
+                  {balance.regular.used} day(s)
+                </p>
+              </div>
             )}
 
             {type === "SICK" && balance?.sick && (
               <p className="text-xs text-slate-500 mt-2">
                 Available sick leave:{" "}
                 <strong>{balance.sick.available} day(s)</strong>
+                {" "}out of {balance.sick.allowance} days.
               </p>
             )}
+
+            <p className="text-xs text-slate-400 mt-2">
+              You can apply even if your paid leave balance is insufficient.
+              Any excess leave may be allocated as unpaid after approval.
+            </p>
           </div>
 
           {/* Duration */}
@@ -191,6 +268,7 @@ const ApplyLeaveModal = ({
                   required
                   min={minDate}
                   value={startDate}
+                  disabled={loading}
                   onChange={(e) =>
                     handleStartDateChange(e.target.value)
                   }
@@ -209,7 +287,10 @@ const ApplyLeaveModal = ({
                   required
                   min={startDate || minDate}
                   value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  disabled={loading}
+                  onChange={(e) =>
+                    handleEndDateChange(e.target.value)
+                  }
                   className="w-full"
                 />
               </div>
@@ -231,14 +312,23 @@ const ApplyLeaveModal = ({
                 <select
                   name="startDayType"
                   value={startDayType}
+                  disabled={loading || firstDayIsSunday}
                   onChange={(e) =>
                     setStartDayType(e.target.value)
                   }
                   className="w-full"
                 >
                   <option value="FULL">Full day</option>
-                  <option value="HALF">Half day</option>
+                  <option value="HALF" disabled={firstDayIsSunday}>
+                    Half day
+                  </option>
                 </select>
+
+                {firstDayIsSunday && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Sunday is not a working day. Half-day leave is unavailable.
+                  </p>
+                )}
               </div>
 
               {!isSingleDate && (
@@ -250,28 +340,39 @@ const ApplyLeaveModal = ({
                   <select
                     name="endDayType"
                     value={endDayType}
+                    disabled={loading || lastDayIsSunday}
                     onChange={(e) =>
                       setEndDayType(e.target.value)
                     }
                     className="w-full"
                   >
                     <option value="FULL">Full day</option>
-                    <option value="HALF">Half day</option>
+                    <option value="HALF" disabled={lastDayIsSunday}>
+                      Half day
+                    </option>
                   </select>
+
+                  {lastDayIsSunday && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Sunday is not a working day. Half-day leave is unavailable.
+                    </p>
+                  )}
                 </div>
               )}
 
               <p className="text-xs text-slate-500">
-                You can select a half-day on both the first and last
-                day of your leave.
+                You can request half-day leave on the first day,
+                last day, or both days. Two half-days count as one
+                full leave day.
               </p>
             </div>
           )}
 
+          {/* Sick leave information */}
           {type === "SICK" && (
             <p className="text-xs text-slate-500">
-              Sick leave is counted in full working days and uses your
-              separate annual allowance of 4 days.
+              Sick leave is counted in full working days and uses
+              your separate annual allowance of 4 days.
             </p>
           )}
 
@@ -286,6 +387,7 @@ const ApplyLeaveModal = ({
               required
               rows={3}
               maxLength={500}
+              disabled={loading}
               className="resize-none w-full"
               placeholder="Briefly describe why you need this leave..."
             />
