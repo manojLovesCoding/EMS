@@ -1,0 +1,947 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Leave Management - Postman Testing Guide</title>
+
+  <style>
+    :root {
+      --primary: #4f46e5;
+      --primary-light: #eef2ff;
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --success: #15803d;
+      --success-bg: #dcfce7;
+      --warning: #b45309;
+      --warning-bg: #fef3c7;
+      --code-bg: #111827;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      background: var(--background);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    .layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* Sidebar */
+
+    .sidebar {
+      width: 270px;
+      background: #111827;
+      color: #fff;
+      padding: 30px 20px;
+      position: fixed;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      font-size: 19px;
+      margin-bottom: 8px;
+    }
+
+    .sidebar p {
+      color: #9ca3af;
+      font-size: 13px;
+      margin-bottom: 28px;
+    }
+
+    .sidebar h3 {
+      font-size: 11px;
+      color: #9ca3af;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin: 24px 0 12px;
+    }
+
+    .sidebar a {
+      display: block;
+      text-decoration: none;
+      color: #cbd5e1;
+      font-size: 13px;
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      transition: 0.2s;
+    }
+
+    .sidebar a:hover {
+      background: #374151;
+      color: #fff;
+    }
+
+    /* Main content */
+
+    .main {
+      margin-left: 270px;
+      width: calc(100% - 270px);
+      padding: 45px 55px;
+      max-width: 1400px;
+    }
+
+    .hero {
+      background: linear-gradient(135deg, #4338ca, #6366f1);
+      color: white;
+      padding: 38px;
+      border-radius: 14px;
+      margin-bottom: 35px;
+    }
+
+    .hero .eyebrow {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      opacity: 0.8;
+      margin-bottom: 10px;
+    }
+
+    .hero h1 {
+      font-size: 30px;
+      margin-bottom: 12px;
+    }
+
+    .hero p {
+      max-width: 700px;
+      font-size: 15px;
+      opacity: 0.9;
+    }
+
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 25px;
+      scroll-margin-top: 25px;
+    }
+
+    .section h2 {
+      font-size: 21px;
+      margin-bottom: 18px;
+      color: #0f172a;
+    }
+
+    .section h3 {
+      font-size: 16px;
+      margin: 24px 0 10px;
+    }
+
+    .section p {
+      margin-bottom: 12px;
+      color: #475569;
+    }
+
+    .section ul,
+    .section ol {
+      padding-left: 23px;
+      margin: 12px 0;
+      color: #475569;
+    }
+
+    .section li {
+      margin-bottom: 8px;
+    }
+
+    /* Tables */
+
+    .table-wrapper {
+      overflow-x: auto;
+      margin: 18px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 450px;
+    }
+
+    th,
+    td {
+      padding: 12px 15px;
+      text-align: left;
+      border: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    td {
+      color: #475569;
+    }
+
+    /* API method and endpoint */
+
+    .endpoint {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 13px 15px;
+      border-radius: 8px;
+      margin: 18px 0;
+      overflow-wrap: anywhere;
+    }
+
+    .method {
+      padding: 4px 10px;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 800;
+      min-width: 65px;
+      text-align: center;
+    }
+
+    .get {
+      color: #166534;
+      background: #dcfce7;
+    }
+
+    .post {
+      color: #1d4ed8;
+      background: #dbeafe;
+    }
+
+    .patch {
+      color: #92400e;
+      background: #fef3c7;
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .endpoint code {
+      font-size: 14px;
+      color: #1e293b;
+    }
+
+    /* Code blocks */
+
+    pre {
+      background: var(--code-bg);
+      color: #e5e7eb;
+      padding: 20px;
+      border-radius: 9px;
+      overflow-x: auto;
+      margin: 15px 0;
+      font-size: 13px;
+      line-height: 1.8;
+      border: 1px solid #273449;
+    }
+
+    pre code {
+      white-space: pre;
+    }
+
+    /* Notes and status */
+
+    .note,
+    .success,
+    .warning {
+      padding: 14px 17px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .note {
+      background: var(--primary-light);
+      border-left: 4px solid var(--primary);
+      color: #3730a3;
+    }
+
+    .success {
+      background: var(--success-bg);
+      border-left: 4px solid var(--success);
+      color: #166534;
+    }
+
+    .warning {
+      background: var(--warning-bg);
+      border-left: 4px solid var(--warning);
+      color: #92400e;
+    }
+
+    .expected {
+      margin-top: 18px;
+      padding-top: 15px;
+      border-top: 1px solid var(--border);
+    }
+
+    .expected strong {
+      color: var(--success);
+    }
+
+    .test-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      color: var(--primary);
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 14px;
+      margin-right: 8px;
+    }
+
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 25px 0;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        margin-left: 0;
+        width: 100%;
+        padding: 25px 18px;
+      }
+
+      .hero {
+        padding: 28px 22px;
+      }
+
+      .hero h1 {
+        font-size: 24px;
+      }
+
+      .section {
+        padding: 20px;
+      }
+    }
+
+    @media print {
+      .sidebar {
+        display: none;
+      }
+
+      .main {
+        width: 100%;
+        margin: 0;
+        padding: 15px;
+      }
+
+      body {
+        background: white;
+      }
+
+      .section {
+        break-inside: avoid;
+      }
+
+      pre {
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar navigation -->
+  <aside class="sidebar">
+    <h2>Leave Management</h2>
+    <p>API Documentation</p>
+
+    <h3>Getting Started</h3>
+    <a href="#setup">Postman Setup</a>
+    <a href="#authentication">Authentication</a>
+
+    <h3>API Test Cases</h3>
+    <a href="#test1">01. Get Leave Balance</a>
+    <a href="#test2">02. Apply Half-Day Leave</a>
+    <a href="#test3">03. Approve Leave</a>
+    <a href="#test4">04. Remaining Balance</a>
+    <a href="#test5">05. Unpaid Leave</a>
+    <a href="#test6">06. No Advance Leave</a>
+    <a href="#test7">07. Monthly Carry-Forward</a>
+    <a href="#test8">08. Rejected Leave</a>
+    <a href="#test9">09. Sick Leave</a>
+    <a href="#test10">10. Pending Applications</a>
+  </aside>
+
+  <!-- Main documentation -->
+  <main class="main">
+
+    <header class="hero">
+      <div class="eyebrow">Backend API Documentation</div>
+      <h1>Postman Testing Guide</h1>
+      <p>
+        Complete testing documentation for the Leave Management module
+        using Postman. This guide covers authentication, leave applications,
+        approval workflows, leave balance calculations, and unpaid leave allocation.
+      </p>
+    </header>
+
+    <!-- Postman setup -->
+    <section class="section" id="setup">
+      <h2>2. Postman Testing Setup</h2>
+
+      <p>
+        First, create a new Postman environment to manage the API
+        configuration and reusable variables.
+      </p>
+
+      <h3>Environment Variables</h3>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Variable</th>
+              <th>Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>baseUrl</code></td>
+              <td><code>http://localhost:5000</code></td>
+            </tr>
+            <tr>
+              <td><code>leaveId</code></td>
+              <td>ID returned from POST request</td>
+            </tr>
+            <tr>
+              <td><code>employeeEmail</code></td>
+              <td>Employee login email</td>
+            </tr>
+            <tr>
+              <td><code>adminEmail</code></td>
+              <td>Admin login email</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="note">
+        <strong>Note:</strong> Change port 5000 if your backend uses
+        a different port.
+      </div>
+    </section>
+
+    <!-- Authentication -->
+    <section class="section" id="authentication">
+      <h2>Authentication Before Testing</h2>
+
+      <p>
+        Your controller uses <code>req.session</code>, so you must
+        authenticate through your existing login API before testing.
+      </p>
+
+      <ol>
+        <li>Login as an employee.</li>
+        <li>Make sure Postman retains the session cookie.</li>
+        <li>Run employee requests.</li>
+        <li>Login as admin before approving or rejecting leave.</li>
+        <li>Switch back to employee login when checking the employee balance.</li>
+      </ol>
+
+      <div class="warning">
+        <strong>Important:</strong> Postman normally manages cookies automatically.
+        If necessary, open Cookies and verify that your session cookie
+        is present for <code>localhost</code>.
+      </div>
+    </section>
+
+    <!-- Test 1 -->
+    <section class="section" id="test1">
+      <h2><span class="test-number">01</span> Get Employee Leave Balance</h2>
+
+      <p>
+        Login as the employee who joined November 2, 2026.
+        Retrieve the employee's current leave balance.
+      </p>
+
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Expected Balance — November 12, 2026</h3>
+
+      <p>Assuming no approved regular leave:</p>
+
+      <pre><code>{
+  "balance": {
+    "leaveYear": {
+      "start": "2026-05-01",
+      "end": "2027-04-30"
+    },
+    "regular": {
+      "earned": 0.5,
+      "used": 0,
+      "available": 0.5
+    },
+    "sick": {
+      "allowance": 4,
+      "used": 0,
+      "available": 4
+    }
+  }
+}</code></pre>
+
+      <div class="note">
+        The actual response also contains <code>data</code> and
+        <code>employee</code>.
+      </div>
+
+      <div class="expected">
+        <strong>Expected Status:</strong> 200 OK
+      </div>
+    </section>
+
+    <!-- Test 2 -->
+    <section class="section" id="test2">
+      <h2><span class="test-number">02</span> Apply for Half-Day Regular Leave</h2>
+
+      <p>Login as employee and create a half-day regular leave application.</p>
+
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Request Body → raw → JSON</h3>
+
+      <pre><code>{
+  "type": "REGULAR",
+  "startDate": "2026-11-16",
+  "endDate": "2026-11-16",
+  "startDayType": "HALF",
+  "endDayType": "FULL",
+  "reason": "Personal work"
+}</code></pre>
+
+      <h3>Expected Response</h3>
+
+      <pre><code>{
+  "success": true,
+  "data": {
+    "_id": "YOUR_LEAVE_ID",
+    "type": "REGULAR",
+    "totalDays": 0.5,
+    "status": "PENDING"
+  }
+}</code></pre>
+
+      <ul>
+        <li>Status: <strong>201 Created</strong></li>
+        <li><code>totalDays</code>: 0.5</li>
+        <li><code>status</code>: PENDING</li>
+      </ul>
+
+      <div class="success">
+        Save the returned <code>_id</code> in your Postman
+        <code>leaveId</code> environment variable.
+      </div>
+    </section>
+
+    <!-- Test 3 -->
+    <section class="section" id="test3">
+      <h2><span class="test-number">03</span> Approve Half-Day Leave</h2>
+
+      <p>Login as ADMIN before approving the employee's application.</p>
+
+      <div class="endpoint">
+        <span class="method patch">PATCH</span>
+        <code>{{baseUrl}}/api/leave/{{leaveId}}</code>
+      </div>
+
+      <h3>Request Body</h3>
+
+      <pre><code>{
+  "status": "APPROVED"
+}</code></pre>
+
+      <h3>Expected Response</h3>
+
+      <pre><code>{
+  "success": true,
+  "message": "Leave approved successfully.",
+  "data": {
+    "status": "APPROVED",
+    "totalDays": 0.5,
+    "paidDays": 0.5,
+    "unpaidDays": 0,
+    "paidRegularDays": 0.5,
+    "unpaidRegularDays": 0
+  }
+}</code></pre>
+
+      <div class="expected">
+        <strong>Expected Status:</strong> 200 OK
+      </div>
+    </section>
+
+    <!-- Test 4 -->
+    <section class="section" id="test4">
+      <h2><span class="test-number">04</span> Check Remaining Regular Leave</h2>
+
+      <p>Login as employee and retrieve the updated leave balance.</p>
+
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Expected Balance</h3>
+
+      <pre><code>{
+  "regular": {
+    "earned": 0.5,
+    "used": 0.5,
+    "available": 0
+  }
+}</code></pre>
+
+      <div class="success">
+        Your November credit has now been consumed.
+      </div>
+    </section>
+
+    <!-- Test 5 -->
+    <section class="section" id="test5">
+      <h2><span class="test-number">05</span> Test Unpaid Leave Allocation</h2>
+
+      <p>
+        The employee now has zero remaining regular leave.
+        Apply for one full day to verify unpaid leave allocation.
+      </p>
+
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Request Body</h3>
+
+      <pre><code>{
+  "type": "REGULAR",
+  "startDate": "2026-11-17",
+  "endDate": "2026-11-17",
+  "startDayType": "FULL",
+  "endDayType": "FULL",
+  "reason": "Personal work"
+}</code></pre>
+
+      <p>Save the new ID and approve the application as ADMIN.</p>
+
+      <h3>Expected Approval Response</h3>
+
+      <pre><code>{
+  "status": "APPROVED",
+  "totalDays": 1,
+  "paidDays": 0,
+  "unpaidDays": 1,
+  "paidRegularDays": 0,
+  "unpaidRegularDays": 1,
+  "unpaidDateBreakdown": [
+    {
+      "date": "2026-11-17T00:00:00.000Z",
+      "days": 1
+    }
+  ]
+}</code></pre>
+
+      <div class="success">
+        <strong>Expected Result:</strong> The employee can still apply for leave
+        even when paid leave is exhausted. The remaining leave becomes unpaid.
+      </div>
+    </section>
+
+    <!-- Test 6 -->
+    <section class="section" id="test6">
+      <h2><span class="test-number">06</span> Test No Advance Leave</h2>
+
+      <p>
+        Use a fresh employee who joined November 2, 2026,
+        and has not used any regular leave.
+      </p>
+
+      <p>On November 12, apply for one full day.</p>
+
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Request Body</h3>
+
+      <pre><code>{
+  "type": "REGULAR",
+  "startDate": "2026-11-18",
+  "endDate": "2026-11-18",
+  "startDayType": "FULL",
+  "endDayType": "FULL",
+  "reason": "Personal work"
+}</code></pre>
+
+      <p>Approve it as ADMIN.</p>
+
+      <h3>Expected Response</h3>
+
+      <pre><code>{
+  "totalDays": 1,
+  "paidDays": 0.5,
+  "unpaidDays": 0.5,
+  "paidRegularDays": 0.5,
+  "unpaidRegularDays": 0.5
+}</code></pre>
+
+      <h3>Why?</h3>
+
+      <ul>
+        <li>November credit = 0.5.</li>
+        <li>December credit = 0.5.</li>
+        <li>Current date = November 12.</li>
+        <li>December credit is not yet available.</li>
+      </ul>
+
+      <div class="note">
+        <strong>Conclusion:</strong> Only 0.5 days can be paid.
+        The remaining 0.5 days will be unpaid.
+      </div>
+    </section>
+
+    <!-- Test 7 -->
+    <section class="section" id="test7">
+      <h2><span class="test-number">07</span> Test Monthly Carry-Forward</h2>
+
+      <p>
+        Use a fresh employee who joined November 2, 2026.
+        Check the leave balance at different dates.
+      </p>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Check Date</th>
+              <th>Earned</th>
+              <th>Used</th>
+              <th>Available</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Nov 12, 2026</td>
+              <td>0.5</td>
+              <td>0</td>
+              <td>0.5</td>
+            </tr>
+            <tr>
+              <td>Dec 1, 2026</td>
+              <td>1.0</td>
+              <td>0</td>
+              <td>1.0</td>
+            </tr>
+            <tr>
+              <td>Jan 1, 2027</td>
+              <td>1.5</td>
+              <td>0</td>
+              <td>1.5</td>
+            </tr>
+            <tr>
+              <td>Feb 1, 2027</td>
+              <td>2.0</td>
+              <td>0</td>
+              <td>2.0</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Example: December 1 Balance</h3>
+
+      <pre><code>{
+  "regular": {
+    "earned": 1,
+    "used": 0,
+    "available": 1
+  }
+}</code></pre>
+
+      <div class="success">
+        <strong>Expected Result:</strong> November's unused 0.5 credit
+        carries forward and combines with December's 0.5 credit.
+      </div>
+
+      <div class="warning">
+        <strong>Note:</strong> This test requires checking on the actual dates.
+        Don't manually change your computer clock in production.
+      </div>
+    </section>
+
+    <!-- Test 8 -->
+    <section class="section" id="test8">
+      <h2><span class="test-number">08</span> Test Rejected Leave</h2>
+
+      <p>
+        Create another leave application and reject it as ADMIN.
+      </p>
+
+      <div class="endpoint">
+        <span class="method patch">PATCH</span>
+        <code>{{baseUrl}}/api/leave/{{leaveId}}</code>
+      </div>
+
+      <h3>Request Body</h3>
+
+      <pre><code>{
+  "status": "REJECTED"
+}</code></pre>
+
+      <h3>Expected Response</h3>
+
+      <pre><code>{
+  "success": true,
+  "message": "Leave rejected successfully."
+}</code></pre>
+
+      <h3>Verify Employee Balance</h3>
+
+      <ul>
+        <li>Rejected application does not consume paid leave.</li>
+        <li>Available regular leave remains unchanged.</li>
+      </ul>
+
+      <div class="success">
+        <strong>Expected Result:</strong> Rejected leave does not affect
+        the employee's paid leave balance.
+      </div>
+    </section>
+
+    <!-- Test 9 -->
+    <section class="section" id="test9">
+      <h2><span class="test-number">09</span> Test Sick Leave</h2>
+
+      <p>Login as employee and apply for two days of sick leave.</p>
+
+      <div class="endpoint">
+        <span class="method post">POST</span>
+        <code>{{baseUrl}}/api/leave</code>
+      </div>
+
+      <h3>Request Body</h3>
+
+      <pre><code>{
+  "type": "SICK",
+  "startDate": "2026-11-19",
+  "endDate": "2026-11-20",
+  "reason": "Not feeling well"
+}</code></pre>
+
+      <p>Approve the application as ADMIN.</p>
+
+      <h3>Expected Approval Response</h3>
+
+      <pre><code>{
+  "status": "APPROVED",
+  "totalDays": 2,
+  "paidDays": 2,
+  "unpaidDays": 0,
+  "paidSickDays": 2,
+  "unpaidSickDays": 0
+}</code></pre>
+
+      <h3>Expected Sick Leave Balance</h3>
+
+      <pre><code>{
+  "sick": {
+    "allowance": 4,
+    "used": 2,
+    "available": 2
+  }
+}</code></pre>
+
+      <div class="success">
+        <strong>Expected Result:</strong> Two days are deducted from
+        the four-day sick leave allowance.
+      </div>
+    </section>
+
+    <!-- Test 10 -->
+    <section class="section" id="test10">
+      <h2><span class="test-number">10</span> Admin Gets All Pending Applications</h2>
+
+      <p>
+        Login as ADMIN and retrieve all pending leave applications.
+      </p>
+
+      <div class="endpoint">
+        <span class="method get">GET</span>
+        <code>{{baseUrl}}/api/leave?status=PENDING</code>
+      </div>
+
+      <h3>Expected Response</h3>
+
+      <pre><code>{
+  "data": [
+    {
+      "_id": "YOUR_LEAVE_ID",
+      "type": "REGULAR",
+      "status": "PENDING",
+      "employee": {
+        "firstName": "John",
+        "lastName": "Doe"
+      }
+    }
+  ]
+}</code></pre>
+
+      <div class="note">
+        Your actual response includes the populated employee document
+        and other leave fields.
+      </div>
+
+      <div class="expected">
+        <strong>Expected Result:</strong> Admin can retrieve pending
+        leave applications successfully.
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>Leave Management System | Postman API Testing Documentation</p>
+      <p>Backend API Testing Guide · 2026</p>
+    </footer>
+
+  </main>
+</div>
+
+</body>
+</html>
