@@ -1,12 +1,10 @@
-
-import mongoose from "mongoose";
 import { inngest } from "../inngest/index.js";
 import Employee from "../models/Employee.js";
 import LeaveApplication from "../models/LeaveApplication.js";
 
-// ==================================================
+// ======================================================
 // DATE HELPERS
-// ==================================================
+// ======================================================
 
 const parseDateOnly = (value) => {
   if (typeof value !== "string") return null;
@@ -32,7 +30,21 @@ const parseDateOnly = (value) => {
   return date;
 };
 
-const getDateKey = (date) => date.toISOString().slice(0, 10);
+const getDateKey = (date) => {
+  return new Date(date).toISOString().slice(0, 10);
+};
+
+const getToday = () => {
+  const now = new Date();
+
+  return new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+  );
+};
+
+const getMonthStart = (date) => {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1));
+};
 
 const getNextDate = (date) => {
   const next = new Date(date);
@@ -40,123 +52,23 @@ const getNextDate = (date) => {
   return next;
 };
 
-const getMonthStart = (date) => {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1),
-  );
-};
-
-const getToday = () => {
-  const now = new Date();
-
-  return new Date(
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate(),
-    ),
-  );
-};
-
 // Sunday is excluded.
 // Monday to Saturday are working days.
-const isWorkingDay = (date) => date.getUTCDay() !== 0;
-
-const roundDays = (value) => {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+const isWorkingDay = (date) => {
+  return date.getUTCDay() !== 0;
 };
 
 const isRegularLeave = (type) => {
   return ["REGULAR", "CASUAL", "ANNUAL"].includes(type);
 };
 
-// ==================================================
-// LEAVE YEAR HELPERS
-// Leave year: May 1 to April 30
-// ==================================================
-
-const getLeaveYearStart = (date) => {
-  const year = date.getUTCFullYear();
-  const month = date.getUTCMonth();
-
-  const leaveYear = month >= 4 ? year : year - 1;
-
-  return new Date(Date.UTC(leaveYear, 4, 1));
+const roundDays = (value) => {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 };
 
-const getLeaveYearEnd = (leaveYearStart) => {
-  return new Date(
-    Date.UTC(
-      leaveYearStart.getUTCFullYear() + 1,
-      3,
-      30,
-    ),
-  );
-};
-
-const getLeaveYearKey = (date) => {
-  return getDateKey(getLeaveYearStart(date));
-};
-
-// ==================================================
-// REGULAR LEAVE CREDIT CALCULATION
-//
-// 0.5 day per eligible month.
-// Starts from employee joining month.
-// Maximum 6 days per leave year.
-// Unused credits accumulate.
-// Future months cannot be used.
-// ==================================================
-
-const getEarnedRegularLeave = (
-  leaveYearStart,
-  joinDate,
-  currentDate = getToday(),
-) => {
-  const leaveYearEnd = getLeaveYearEnd(leaveYearStart);
-
-  const joiningMonth = getMonthStart(joinDate);
-
-  // Employee joined after this leave year.
-  if (joiningMonth > leaveYearEnd) {
-    return 0;
-  }
-
-  // Leave year has not started yet.
-  if (currentDate < leaveYearStart) {
-    return 0;
-  }
-
-  // Determine the first eligible month.
-  const firstEligibleMonth =
-    joiningMonth > leaveYearStart
-      ? joiningMonth
-      : leaveYearStart;
-
-  // Determine the last month for which credits are available.
-  const lastEligibleMonth =
-    currentDate < leaveYearEnd
-      ? getMonthStart(currentDate)
-      : getMonthStart(leaveYearEnd);
-
-  if (lastEligibleMonth < firstEligibleMonth) {
-    return 0;
-  }
-
-  const monthsElapsed =
-    (lastEligibleMonth.getUTCFullYear() -
-      firstEligibleMonth.getUTCFullYear()) *
-      12 +
-    (lastEligibleMonth.getUTCMonth() -
-      firstEligibleMonth.getUTCMonth()) +
-    1;
-
-  return roundDays(Math.min(monthsElapsed * 0.5, 6));
-};
-
-// ==================================================
-// LEAVE DAY CALCULATION
-// ==================================================
+// ======================================================
+// LEAVE DAY VALUE
+// ======================================================
 
 const getLeaveDayValue = (
   current,
@@ -188,6 +100,10 @@ const getLeaveDayValue = (
   return dayValue;
 };
 
+// ======================================================
+// CALCULATE TOTAL LEAVE DAYS
+// ======================================================
+
 const calculateLeaveDays = (
   startDate,
   endDate,
@@ -214,15 +130,91 @@ const calculateLeaveDays = (
   return roundDays(totalDays);
 };
 
-// ==================================================
+// ======================================================
+// LEAVE YEAR HELPERS
+// Leave year: May 1 to April 30
+// ======================================================
+
+const getLeaveYearStart = (date) => {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth();
+
+  const leaveYear = month >= 4 ? year : year - 1;
+
+  return new Date(Date.UTC(leaveYear, 4, 1));
+};
+
+const getLeaveYearEnd = (leaveYearStart) => {
+  return new Date(Date.UTC(leaveYearStart.getUTCFullYear() + 1, 3, 30));
+};
+
+const getLeaveYearKey = (date) => {
+  return getDateKey(getLeaveYearStart(date));
+};
+
+// ======================================================
+// REGULAR LEAVE ACCRUAL
+//
+// 0.5 day per month.
+// Maximum 6 days per leave year.
+//
+// Credits start from May 1, regardless of the
+// employee's joining month.
+//
+// Future joining dates receive zero credits.
+// ======================================================
+
+const getEarnedRegularLeave = (
+  leaveYearStart,
+  joinDate,
+  currentDate = getToday(),
+) => {
+  const today = getDateKey(currentDate);
+  const joiningDate = getDateKey(joinDate);
+
+  // Employee has not joined yet.
+  if (joiningDate > today) {
+    return 0;
+  }
+
+  // Leave year has not started.
+  if (currentDate < leaveYearStart) {
+    return 0;
+  }
+
+  const leaveYearEnd = getLeaveYearEnd(leaveYearStart);
+
+  // Calculate credits only up to the current month.
+  const lastEligibleMonth =
+    currentDate > leaveYearEnd
+      ? getMonthStart(leaveYearEnd)
+      : getMonthStart(currentDate);
+
+  // Start counting from May, not the joining month.
+  const firstEligibleMonth = getMonthStart(leaveYearStart);
+
+  const monthsElapsed =
+    (lastEligibleMonth.getUTCFullYear() - firstEligibleMonth.getUTCFullYear()) *
+      12 +
+    (lastEligibleMonth.getUTCMonth() - firstEligibleMonth.getUTCMonth()) +
+    1;
+
+  if (monthsElapsed <= 0) {
+    return 0;
+  }
+
+  return roundDays(Math.min(monthsElapsed * 0.5, 6));
+};
+
+// ======================================================
 // APPROVED LEAVE USAGE BY LEAVE YEAR
 //
-// Only approved PAID leave consumes the balance.
-// Unpaid leave does not consume paid credits.
+// Only paid leave consumes the paid balance.
+// Unpaid leave does not consume the balance.
 //
-// Old records without a breakdown are treated as
-// fully paid for backward compatibility.
-// ==================================================
+// Older records without a stored breakdown are
+// treated as fully paid for backward compatibility.
+// ======================================================
 
 const getApprovedUsageByYear = (leaves) => {
   const usage = {};
@@ -248,14 +240,12 @@ const getApprovedUsageByYear = (leaves) => {
 
       unpaidByDate.set(
         key,
-        (unpaidByDate.get(key) || 0) +
-          Number(entry.days || 0),
+        (unpaidByDate.get(key) || 0) + Number(entry.days || 0),
       );
     }
 
     const hasStoredBreakdown =
-      Number(leave.paidDays || 0) > 0 ||
-      Number(leave.unpaidDays || 0) > 0;
+      Number(leave.paidDays || 0) > 0 || Number(leave.unpaidDays || 0) > 0;
 
     let current = new Date(startDate);
 
@@ -272,10 +262,7 @@ const getApprovedUsageByYear = (leaves) => {
         const currentKey = getDateKey(current);
 
         const unpaid = hasStoredBreakdown
-          ? Math.min(
-              dayValue,
-              unpaidByDate.get(currentKey) || 0,
-            )
+          ? Math.min(dayValue, unpaidByDate.get(currentKey) || 0)
           : 0;
 
         const paid = roundDays(dayValue - unpaid);
@@ -308,14 +295,15 @@ const getApprovedUsageByYear = (leaves) => {
   return usage;
 };
 
-// ==================================================
+// ======================================================
 // GET EMPLOYEE LEAVE BALANCE
-// ==================================================
+// ======================================================
 
 const getEmployeeLeaveBalance = async (employee) => {
   const now = getToday();
 
   const leaveYearStart = getLeaveYearStart(now);
+  const leaveYearEnd = getLeaveYearEnd(leaveYearStart);
   const yearKey = getDateKey(leaveYearStart);
 
   const approvedLeaves = await LeaveApplication.find({
@@ -327,7 +315,7 @@ const getEmployeeLeaveBalance = async (employee) => {
 
   const regularEarned = getEarnedRegularLeave(
     leaveYearStart,
-    new Date(employee.joinDate),
+    employee.joinDate,
     now,
   );
 
@@ -337,40 +325,35 @@ const getEmployeeLeaveBalance = async (employee) => {
   return {
     leaveYear: {
       start: getDateKey(leaveYearStart),
-      end: getDateKey(getLeaveYearEnd(leaveYearStart)),
+      end: getDateKey(leaveYearEnd),
     },
 
     regular: {
       earned: regularEarned,
       used: regularUsed,
-      available: roundDays(
-        Math.max(0, regularEarned - regularUsed),
-      ),
+      available: roundDays(Math.max(0, regularEarned - regularUsed)),
     },
 
     sick: {
       allowance: 4,
       used: sickUsed,
-      available: roundDays(
-        Math.max(0, 4 - sickUsed),
-      ),
+      available: roundDays(Math.max(0, 4 - sickUsed)),
     },
   };
 };
 
-// ==================================================
-// CALCULATE PAID / UNPAID LEAVE BREAKDOWN
+// ======================================================
+// CALCULATE PAID AND UNPAID LEAVE BREAKDOWN
 //
 // Regular leave:
-// 0.5 day per eligible month.
-// Maximum 6 days per leave year.
+// 0.5 day per month, maximum 6 days per leave year.
 //
 // Sick leave:
 // 4 days per leave year.
 //
 // Paid leave is allocated first.
 // Remaining leave becomes unpaid.
-// ==================================================
+// ======================================================
 
 const calculateLeaveBreakdown = async (leave, employee) => {
   const approvedLeaves = await LeaveApplication.find({
@@ -389,8 +372,6 @@ const calculateLeaveBreakdown = async (leave, employee) => {
   if (!regular && !sick) {
     throw new Error("Invalid leave type.");
   }
-
-  const joinDate = new Date(employee.joinDate);
 
   const startDate = new Date(leave.startDate);
   const endDate = new Date(leave.endDate);
@@ -411,8 +392,7 @@ const calculateLeaveBreakdown = async (leave, employee) => {
     unpaidDateBreakdown: [],
   };
 
-  // Tracks paid leave already allocated within
-  // this particular application.
+  // Track paid leave allocated within this application.
   const allocatedByYear = {};
 
   let current = new Date(startDate);
@@ -448,29 +428,23 @@ const calculateLeaveBreakdown = async (leave, employee) => {
 
         const earned = getEarnedRegularLeave(
           leaveYearStart,
-          joinDate,
+          employee.joinDate,
           now,
         );
 
         available = Math.max(
           0,
-          earned -
-            existingUsage.regular -
-            allocatedByYear[yearKey].regular,
+          earned - existingUsage.regular - allocatedByYear[yearKey].regular,
         );
       } else {
         available = Math.max(
           0,
-          4 -
-            existingUsage.sick -
-            allocatedByYear[yearKey].sick,
+          4 - existingUsage.sick - allocatedByYear[yearKey].sick,
         );
       }
 
       // Allocate paid leave first.
-      const paid = roundDays(
-        Math.min(dayValue, available),
-      );
+      const paid = roundDays(Math.min(dayValue, available));
 
       // Remaining portion becomes unpaid.
       const unpaid = roundDays(dayValue - paid);
@@ -502,7 +476,7 @@ const calculateLeaveBreakdown = async (leave, employee) => {
     current = getNextDate(current);
   }
 
-  // Round all numeric fields.
+  // Round numeric fields only.
   for (const key of Object.keys(breakdown)) {
     if (key !== "unpaidDateBreakdown") {
       breakdown[key] = roundDays(breakdown[key]);
@@ -512,10 +486,10 @@ const calculateLeaveBreakdown = async (leave, employee) => {
   return breakdown;
 };
 
-// ==================================================
+// ======================================================
 // POST /api/leave
 // CREATE LEAVE APPLICATION
-// ==================================================
+// ======================================================
 
 export const createLeave = async (req, res) => {
   try {
@@ -537,24 +511,14 @@ export const createLeave = async (req, res) => {
       });
     }
 
-    if (
-      employee.isDeleted ||
-      employee.employmentStatus === "INACTIVE"
-    ) {
+    if (employee.isDeleted || employee.employmentStatus === "INACTIVE") {
       return res.status(403).json({
-        error:
-          "Your account is inactive. You cannot apply for leave.",
+        error: "Your account is inactive. You cannot apply for leave.",
       });
     }
 
-    const {
-      type,
-      startDate,
-      endDate,
-      startDayType,
-      endDayType,
-      reason,
-    } = req.body;
+    const { type, startDate, endDate, startDayType, endDayType, reason } =
+      req.body;
 
     if (
       !type ||
@@ -597,48 +561,29 @@ export const createLeave = async (req, res) => {
       });
     }
 
-    // Half-day options apply only to regular leave.
     const firstDayType =
-      type === "REGULAR" && startDayType === "HALF"
-        ? "HALF"
-        : "FULL";
+      type === "REGULAR" && startDayType === "HALF" ? "HALF" : "FULL";
 
     const lastDayType =
-      type === "REGULAR" && endDayType === "HALF"
-        ? "HALF"
-        : "FULL";
+      type === "REGULAR" && endDayType === "HALF" ? "HALF" : "FULL";
 
-    if (
-      firstDayType === "HALF" &&
-      !isWorkingDay(start)
-    ) {
+    if (firstDayType === "HALF" && !isWorkingDay(start)) {
       return res.status(400).json({
-        error:
-          "The first day of a half-day request must be a working day.",
+        error: "The first day of a half-day request must be a working day.",
       });
     }
 
-    if (
-      lastDayType === "HALF" &&
-      !isWorkingDay(end)
-    ) {
+    if (lastDayType === "HALF" && !isWorkingDay(end)) {
       return res.status(400).json({
-        error:
-          "The last day of a half-day request must be a working day.",
+        error: "The last day of a half-day request must be a working day.",
       });
     }
 
-    const totalDays = calculateLeaveDays(
-      start,
-      end,
-      firstDayType,
-      lastDayType,
-    );
+    const totalDays = calculateLeaveDays(start, end, firstDayType, lastDayType);
 
     if (totalDays <= 0) {
       return res.status(400).json({
-        error:
-          "The selected dates do not contain any working days.",
+        error: "The selected dates do not contain any working days.",
       });
     }
 
@@ -674,10 +619,10 @@ export const createLeave = async (req, res) => {
   }
 };
 
-// ==================================================
+// ======================================================
 // GET /api/leave
 // GET LEAVE APPLICATIONS
-// ==================================================
+// ======================================================
 
 export const getLeaves = async (req, res) => {
   try {
@@ -691,16 +636,14 @@ export const getLeaves = async (req, res) => {
 
     const isAdmin = session.role === "ADMIN";
 
-    // ADMIN: Get all employee leave applications.
+    // ADMIN: Get all leave applications.
     if (isAdmin) {
       const { status } = req.query;
 
       const where = {};
 
       if (status) {
-        if (
-          !["PENDING", "APPROVED", "REJECTED"].includes(status)
-        ) {
+        if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
           return res.status(400).json({
             error: "Invalid leave status filter.",
           });
@@ -761,22 +704,16 @@ export const getLeaves = async (req, res) => {
   }
 };
 
-// ==================================================
+// ======================================================
 // PATCH /api/leave/:id
 // ADMIN APPROVES OR REJECTS LEAVE
-// ==================================================
+// ======================================================
 
 export const updateLeaveStatus = async (req, res) => {
   try {
     if (req.session?.role !== "ADMIN") {
       return res.status(403).json({
         error: "Only admins can update leave status.",
-      });
-    }
-
-    if (!mongoose.isValidObjectId(req.params.id)) {
-      return res.status(400).json({
-        error: "Invalid leave application ID.",
       });
     }
 
@@ -795,17 +732,14 @@ export const updateLeaveStatus = async (req, res) => {
 
     if (!leave) {
       return res.status(404).json({
-        error:
-          "Leave application not found or already processed.",
+        error: "Leave application not found or already processed.",
       });
     }
 
     let updateFields = { status };
 
     if (status === "APPROVED") {
-      const employee = await Employee.findById(
-        leave.employeeId,
-      );
+      const employee = await Employee.findById(leave.employeeId);
 
       if (
         !employee ||
@@ -813,15 +747,11 @@ export const updateLeaveStatus = async (req, res) => {
         employee.employmentStatus === "INACTIVE"
       ) {
         return res.status(400).json({
-          error:
-            "Cannot approve leave for an inactive employee.",
+          error: "Cannot approve leave for an inactive employee.",
         });
       }
 
-      const breakdown = await calculateLeaveBreakdown(
-        leave,
-        employee,
-      );
+      const breakdown = await calculateLeaveBreakdown(leave, employee);
 
       updateFields = {
         status: "APPROVED",
@@ -830,7 +760,7 @@ export const updateLeaveStatus = async (req, res) => {
     }
 
     // Prevent two admins from processing the same
-    // pending application.
+    // pending leave application.
     const updatedLeave = await LeaveApplication.findOneAndUpdate(
       {
         _id: leave._id,
@@ -847,8 +777,7 @@ export const updateLeaveStatus = async (req, res) => {
 
     if (!updatedLeave) {
       return res.status(409).json({
-        error:
-          "This leave application has already been processed.",
+        error: "This leave application has already been processed.",
       });
     }
 
